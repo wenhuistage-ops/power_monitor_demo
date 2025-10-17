@@ -49,7 +49,7 @@
             border-bottom: 1px solid var(--border-color);
             height: var(--header-height);
             display: flex;
-            align-items: center;
+            align-items: center; 
             padding: 0 20px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
@@ -58,7 +58,38 @@
             font-size: 24px;
             font-weight: 800;
             color: #3b82f6; 
+            flex-grow: 1; 
         }
+        
+        /* --- 漢堡圖示動畫樣式 (轉換成 'X') --- */
+        .hamburger-line {
+            display: block;
+            height: 3px;
+            width: 100%;
+            /* 繼承按鈕的 text-white 顏色，確保圖示清晰可見 */
+            background-color: currentColor; 
+            border-radius: 9999px;
+            /* 所有線條都套用過渡動畫 */
+            transition: all 0.3s ease-in-out; 
+        }
+        
+        /* .open class 應用在 #hamburger-icon-container 上 */
+        
+        /* 1. 頂部線條：向下移動 10.5px 並旋轉 45 度 */
+        .open .top-line {
+            transform: translateY(10.5px) rotate(45deg); 
+        }
+        /* 2. 中間線條：隱藏並向左移動 */
+        .open .middle-line {
+            opacity: 0; 
+            transform: translateX(-20px); 
+        }
+        /* 3. 底部線條：向上移動 10.5px 並旋轉 -45 度 */
+        .open .bottom-line {
+            transform: translateY(-10.5px) rotate(-45deg); 
+        }
+        /* --- 結束：漢堡圖示動畫樣式 --- */
+
 
         /* --- 側邊欄 (Sidebar) 樣式 --- */
 
@@ -96,6 +127,11 @@
             font-weight: 500;
             white-space: nowrap;
         }
+        
+        .nav-button svg {
+            stroke: currentColor; 
+        }
+
 
         .nav-button:hover {
             background-color: var(--nav-bg-hover);
@@ -139,28 +175,28 @@
             transition: transform 0.3s, background-color 0.3s, box-shadow 0.3s;
         }
         
-        /* --- [新增/修改] 指標卡片文字大小 --- */
+        /* 指標卡片文字大小 */
         .metric-card .metric-label {
-            font-size: 16px; /* 標籤文字 (例如: 即時用電) */
+            font-size: 16px; 
             font-weight: 500;
             color: var(--text-secondary);
             margin-bottom: 5px;
         }
 
         .metric-card .metric-value {
-            font-size: 36px; /* 主要數值文字 (已放大) */
+            font-size: 36px; 
             font-weight: 800;
             line-height: 1.2;
             margin: 0;
         }
 
         .metric-card .metric-unit {
-            font-size: 18px; /* 單位文字 (例如: kW) */
+            font-size: 18px; 
             font-weight: 600;
             color: var(--text-secondary);
             margin-top: 5px;
         }
-        /* --- [結束] 指標卡片文字大小 --- */
+        /* 結束 指標卡片文字大小 */
 
 
         .dark-mode .metric-card {
@@ -221,15 +257,42 @@
             padding-top: 15px;
             border-top: 1px solid var(--border-color);
         }
-
+/* 新增到 style 區塊 */
+#mobile-toggle-btn {
+    padding: 8px; /* p-2 */
+    width: 40px; /* w-10 */
+    height: 40px; /* h-10 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* rounded-full */
+    color: white; /* text-white */
+    background-color: #2563eb; /* bg-blue-600 */
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* shadow-lg */
+    position: relative; /* 確保 z-index 能正確工作 */
+    z-index: 60; /* 確保它在 header 頂部 */
+}
+#mobile-toggle-btn:hover {
+    background-color: #1d4ed8; /* hover:bg-blue-700 */
+}
+#hamburger-icon-container {
+    width: 24px; /* w-6 */
+    height: 24px; /* h-6 */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between; /* justify-between */
+}
         /* --- 響應式調整 (手機模式 < 768px) --- */
         @media (max-width: 767px) {
             
             .main-container {
-                flex-direction: column; /* 讓內容垂直堆疊 */
+                flex-direction: column; 
             }
 
-            /* 側邊欄在手機上變成下拉選單 */
+            /* 側邊欄在手機上變成下拉選單，並套用動畫效果 */
             .sidebar {
                 position: absolute; 
                 top: var(--header-height);
@@ -244,6 +307,7 @@
                 padding-top: 0;
                 padding-bottom: 0;
 
+                /* 讓選單展開時有平滑的動畫 */
                 transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, padding 0.3s ease-in-out;
             }
             
@@ -256,10 +320,15 @@
             }
 
             .main-content {
-                padding: 15px; 
+                padding: 10px; 
             }
             .metrics-grid {
                 grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+
+            /* 優化：減少圖表區塊內部的填充 */
+            .chart-section {
+                padding: 15px; 
             }
 
             .sidebar-inner {
@@ -280,12 +349,21 @@
 
     <!-- 1. 頂部標頭 (在手機上包含收縮按鈕) -->
     <header class="app-header">
-        <div class="header-title flex-grow">電力監控儀表板</div>
+        <div class="header-title">電力監控儀表板</div>
         
-        <!-- 手機選單切換按鈕 -->
-        <button id="mobile-toggle-btn" class="p-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition" onclick="toggleMobileSidebar()">
-            <!-- 漢堡包圖標 -->
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+        <!-- 手機選單切換按鈕 - 藍色圓形按鈕 -->
+        <button id="mobile-toggle-btn" 
+                class="p-2 w-10 h-10 flex items-center justify-center rounded-full text-white bg-blue-600 hover:bg-blue-700 transition shadow-lg focus:outline-none" 
+                onclick="toggleMobileSidebar()">
+            
+            <!-- Animated Hamburger Icon Structure (使用三條線實現動畫) -->
+            <!-- 容器高度 h-6 (24px) -->
+            <div class="w-6 h-6 flex flex-col justify-between" id="hamburger-icon-container">
+                <span class="hamburger-line top-line"></span>
+                <span class="hamburger-line middle-line"></span>
+                <span class="hamburger-line bottom-line"></span>
+            </div>
+            
         </button>
     </header>
 
@@ -301,10 +379,14 @@
                 <!-- 導航按鈕將由 JS 渲染 -->
             </div>
             
-            <!-- 深色模式切換按鈕 -->
+            <!-- 深色模式切換按鈕 - 使用 SVG 替代 Emoji，解決佔位符問題 -->
             <div class="mode-toggle-container">
                 <button id="dark-mode-toggle" class="nav-button flex justify-center items-center" onclick="toggleDarkMode()">
-                    🌙<span class="button-text">深色模式</span>
+                    <!-- Moon Icon (初始狀態：深色模式) -->
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3"/>
+                    </svg>
+                    <span class="button-text">深色模式</span>
                 </button>
             </div>
         </nav>
@@ -781,6 +863,7 @@
 
         window.toggleMobileSidebar = function(forceClose = false) {
             const sidebar = document.getElementById('sidebar');
+            const iconContainer = document.getElementById('hamburger-icon-container'); // 取得動畫圖示容器
             
             if (!isMobileView()) return; 
 
@@ -789,21 +872,27 @@
             if (forceClose || isExpanded) {
                 // 收縮
                 sidebar.classList.remove('expanded');
+                if (iconContainer) iconContainer.classList.remove('open'); // 關閉圖示動畫 (變回漢堡)
             } else {
                 // 展開
                 sidebar.classList.add('expanded');
+                if (iconContainer) iconContainer.classList.add('open'); // 開啟圖示動畫 (變為 X)
             }
         }
         
         // 處理視窗大小變化，確保選單狀態正確
         window.addEventListener('resize', () => {
             const sidebar = document.getElementById('sidebar');
+            const iconContainer = document.getElementById('hamburger-icon-container'); // 取得動畫圖示容器
+            
             if (!isMobileView()) {
                 // 桌面模式：確保選單是完全展開的（移除手機收縮類別）
                 sidebar.classList.remove('expanded'); 
+                if (iconContainer) iconContainer.classList.remove('open'); // 重設圖示
             } else {
                  // 手機模式：預設收起來
                  sidebar.classList.remove('expanded');
+                 if (iconContainer) iconContainer.classList.remove('open'); // 重設圖示
             }
         });
 
@@ -937,7 +1026,25 @@
             document.body.classList.toggle('dark-mode', isDarkMode);
             
             const modeBtn = document.getElementById('dark-mode-toggle');
-            modeBtn.innerHTML = isDarkMode ? '☀️<span class="button-text">淺色模式</span>' : '🌙<span class="button-text">深色模式</span>';
+            
+            // 由於 isDarkMode 已經被切換，我們檢查它的新狀態
+            if (isDarkMode) {
+                // 現在是深色模式 -> 按鈕顯示切換到淺色模式 (Sun Icon)
+                modeBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                        <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                    </svg>
+                    <span class="button-text">淺色模式</span>
+                `;
+            } else {
+                // 現在是淺色模式 -> 按鈕顯示切換到深色模式 (Moon Icon)
+                modeBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3"/>
+                    </svg>
+                    <span class="button-text">深色模式</span>
+                `;
+            }
             
             if (currentChart) {
                 const selectedData = areaData.find(d => d.id === selectedAreaId);
