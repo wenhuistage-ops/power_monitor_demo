@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電力監控儀表板</title>
+    <!-- 引入 Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        
+        :root {
+            /* Light Mode Variables */
+            --bg-color: #f4f7f6;
+            --main-bg-color: #ffffff;
+            --text-color: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: #e5e7eb;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --chart-grid-color: rgba(0, 0, 0, 0.1);
+            --sidebar-active-bg: #3b82f6;
+            --sidebar-active-text: #ffffff;
+            --sidebar-hover-bg: #e5e7eb;
+            --sidebar-text: #4b5563;
+        }
+
+        .dark-mode {
+            /* Dark Mode Variables */
+            --bg-color: #1f2937;
+            --main-bg-color: #374151;
+            --text-color: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --border-color: #4b5563;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --chart-grid-color: rgba(255, 255, 255, 0.1);
+            --sidebar-active-bg: #3b82f6;
+            --sidebar-active-text: #ffffff;
+            --sidebar-hover-bg: #4b5563;
+            --sidebar-text: #d1d5db;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--main-bg-color);
+            box-shadow: 2px 0 5px var(--shadow-color);
+            padding: 20px;
+            flex-shrink: 0;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .main-content {
+            flex-grow: 1;
+            padding: 30px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #1e40af; /* 藍色標題不隨深色模式改變，保持醒目 */
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3b82f6;
+        }
+
+        /* 導航按鈕樣式 */
+        .nav-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: none;
+            background-color: transparent;
+            color: var(--sidebar-text);
+            text-align: left;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+            font-weight: 500;
+        }
+
+        .nav-button:hover {
+            background-color: var(--sidebar-hover-bg);
+        }
+
+        .nav-button.active {
+            background-color: var(--sidebar-active-bg);
+            color: var(--sidebar-active-text);
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3), 0 2px 4px -2px rgba(59, 130, 246, 0.3);
+        }
+
+        /* 指標卡片樣式 */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background-color: var(--main-bg-color);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            transition: transform 0.3s, background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px var(--shadow-color);
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+            transition: color 0.3s;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-top: 0;
+            line-height: 1.1;
+        }
+
+        .metric-unit {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .chart-section {
+            background-color: var(--main-bg-color);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .chart-canvas-container {
+            height: 400px;
+            width: 100%;
+        }
+
+        /* 區間選擇按鈕組 */
+        .interval-selector {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap; 
+        }
+
+        .interval-button {
+            padding: 8px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+            font-weight: 500;
+        }
+
+        .interval-button:hover {
+            background-color: var(--sidebar-hover-bg);
+            color: var(--sidebar-text);
+        }
+        
+        .dark-mode .interval-button:hover {
+            background-color: var(--sidebar-hover-bg);
+            color: var(--sidebar-active-text);
+        }
+
+        .interval-button.active {
+            background-color: #3b82f6;
+            color: #ffffff;
+            border-color: #3b82f6;
+        }
+
+        /* 自訂區間樣式 */
+        #custom-range-selector {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--bg-color);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s;
+        }
+
+        #custom-range-selector label {
+            font-weight: 500;
+            color: var(--text-color);
+            transition: color 0.3s;
+        }
+
+        #custom-range-selector input {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: var(--main-bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        /* 響應式調整 */
+        @media (max-width: 768px) {
+            body {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                box-shadow: 0 2px 5px var(--shadow-color);
+            }
+            .main-content {
+                padding: 20px;
+            }
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+            .title {
+                font-size: 20px;
+            }
+            #custom-range-selector {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            #custom-range-selector label {
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h1 class="title">電力監控</h1>
+        <div id="area-navigation">
+            <!-- 導航按鈕將由 JS 渲染 -->
+        </div>
+        
+        <!-- 深色模式切換按鈕 -->
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+            <button class="nav-button" onclick="toggleDarkMode()">
+                <span id="dark-mode-icon" style="margin-right: 8px;">🌙</span> 切換深色模式
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <h2 id="dashboard-title" style="font-size: 32px; font-weight: 800; color: var(--text-color); margin-bottom: 20px; transition: color 0.3s;">請選擇一個監控區域</h2>
+        
+        <div id="dashboard-metrics" class="metrics-grid">
+            <!-- 指標卡片將由 JS 渲染 -->
+        </div>
+
+        <div id="chart-section" class="chart-section" style="display: none;">
+            <div class="interval-selector">
+                <button id="btn-5min_live" class="interval-button active" onclick="switchInterval('5min_live')">即時趨勢 (5分)</button>
+                <button id="btn-8h_live" class="interval-button" onclick="switchInterval('8h_live')">8 小時滾動</button>
+                <button id="btn-custom" class="interval-button" onclick="switchInterval('custom')">自訂區間</button>
+            </div>
+            
+            <!-- 自訂區間選擇 UI -->
+            <div id="custom-range-selector" style="display: none;">
+                <label for="startDate">開始日期/時間:</label>
+                <input type="datetime-local" id="startDate" value="2025-10-17T00:00">
+                <label for="endDate">結束日期/時間:</label>
+                <input type="datetime-local" id="endDate" value="2025-10-17T08:00">
+                <button class="interval-button" style="background-color: #10b981; border-color: #10b981; color: white;" onclick="generateCustomChart()">生成圖表</button>
+            </div>
+
+            <div class="chart-canvas-container">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 全域變數與常量 ---
+        const CHART_5MIN_POINTS = 60;   
+        const LIVE_START_INDEX = 30;    
+        const CHART_8H_POINTS = 96;     
+        
+        let currentChart = null;        
+        let selectedAreaId = 'A'; 
+        let currentInterval = '5min_live';
+        let realTimeInterval = null;    
+        let live5MinInterval = null;    
+        let live8HourInterval = null;   
+        let live5MinCounter = LIVE_START_INDEX; 
+
+        // 模擬數據結構
+        const areaData = [
+            { id: 'A', name: '區域 A - 機房核心', latest: { realTimePower: 12.55, current: 35.8, voltage: 220.1, powerFactor: 0.98, dailyEnergy: 158.7, }, liveHistory: null, eightHourHistory: null },
+            { id: 'B', name: '區域 B - 辦公室樓層', latest: { realTimePower: 4.12, current: 12.5, voltage: 220.5, powerFactor: 0.85, dailyEnergy: 95.3, }, liveHistory: null, eightHourHistory: null },
+            { id: 'C', name: '區域 C - 研發實驗室', latest: { realTimePower: 8.90, current: 28.1, voltage: 220.0, powerFactor: 0.99, dailyEnergy: 110.5 }, liveHistory: null, eightHourHistory: null },
+            { id: 'D', name: '區域 D - 休息與餐飲區', latest: { realTimePower: 1.50, current: 5.2, voltage: 220.3, powerFactor: 0.92, dailyEnergy: 35.0 }, liveHistory: null, eightHourHistory: null },
+            { id: 'E', name: '區域 E - 戶外照明', latest: { realTimePower: 0.80, current: 3.0, voltage: 220.2, powerFactor: 0.95, dailyEnergy: 15.2 }, liveHistory: null, eightHourHistory: null },
+        ];
+        
+        // --- 實用函數 ---
+        
+        function getCurrentTimeLabel(includeSeconds = true) {
+            const options = { hour: '2-digit', minute: '2-digit', hour12: false };
+            if (includeSeconds) {
+                options.second = '2-digit';
+            }
+            return new Date().toLocaleTimeString('zh-Hant', options);
+        }
+
+        function stopAllChartIntervals() {
+            if (live5MinInterval) clearInterval(live5MinInterval);
+            if (live8HourInterval) clearInterval(live8HourInterval);
+            live5MinInterval = null;
+            live8HourInterval = null;
+        }
+
+        // --- 核心邏輯：指標更新 (1 秒) ---
+
+        function renderMetricCard(label, value, unit, colorClass) {
+            return `<div class="metric-card"><p class="metric-label">${label}</p><p class="metric-value" style="color: ${colorClass};">${value.toFixed(2)}</p><p class="metric-unit">${unit}</p></div>`;
+        }
+
+        function renderMetrics(data) {
+            const container = document.getElementById('dashboard-metrics');
+            const latest = data.latest;
+            const pfColor = latest.powerFactor < 0.9 ? '#ef4444' : '#10b981';
+
+            container.innerHTML = `
+                ${renderMetricCard("即時用電", latest.realTimePower, "kW", "#3b82f6")}
+                ${renderMetricCard("當日累積", latest.dailyEnergy, "kWh", "#f59e0b")}
+                ${renderMetricCard("功率因素", latest.powerFactor, "PF", pfColor)}
+                ${renderMetricCard("電流", latest.current, "A", "#8b5cf6")}
+                ${renderMetricCard("電壓", latest.voltage, "V", "#4b5563")}
+            `;
+        }
+
+        function startRealTimeUpdates() {
+            if (realTimeInterval) clearInterval(realTimeInterval);
+
+            realTimeInterval = setInterval(() => {
+                const selectedData = areaData.find(d => d.id === selectedAreaId);
+                
+                if (selectedData) {
+                    let latest = selectedData.latest;
+                    let currentPower = latest.realTimePower;
+
+                    // 1. 即時用電 (Power) - 波動
+                    const powerFluctuation = (Math.random() - 0.5) * 0.3; 
+                    let newPower = Math.min(Math.max(currentPower + powerFluctuation, 0.1), currentPower + 0.5); 
+                    
+                    // 2. 當日累積 (Daily Energy) - 累積
+                    latest.dailyEnergy += newPower * (1 / 3600); 
+
+                    // 3. 電壓 (Voltage) - 波動
+                    const voltageFluctuation = (Math.random() - 0.5) * 0.1;
+                    latest.voltage = 220.0 + voltageFluctuation;
+
+                    // 4. 功率因素 (Power Factor) - 波動
+                    const pfFluctuation = (Math.random() - 0.5) * 0.005; 
+                    latest.powerFactor = Math.min(1.0, Math.max(0.7, latest.powerFactor + pfFluctuation)); 
+
+                    // 5. 電流 (Current) - 聯動
+                    const nominalCurrentFactor = 2.85; 
+                    latest.current = newPower * nominalCurrentFactor / latest.powerFactor / 220.0 * latest.voltage;
+                    
+                    latest.realTimePower = newPower;
+                    latest.dailyEnergy = parseFloat(latest.dailyEnergy.toFixed(3));
+                    latest.current = parseFloat(latest.current.toFixed(2));
+                    latest.voltage = parseFloat(latest.voltage.toFixed(2));
+
+                    renderMetrics(selectedData);
+                }
+            }, 1000); 
+        }
+
+        // --- 5 分鐘即時趨勢初始化 ---
+        function init5MinHistory(selectedData) {
+            const powerBaseline = selectedData.latest.realTimePower;
+            const initialHistory = { labels: [], powerData: [] };
+            const now = new Date();
+            const intervalMs = 5000; // 5 秒間隔
+            let simulatedPower = powerBaseline * 0.9; 
+
+            for (let i = 0; i < CHART_5MIN_POINTS; i++) {
+                const time = new Date(now.getTime() + (i - LIVE_START_INDEX) * intervalMs);
+                const label = time.toLocaleTimeString('zh-Hant', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                
+                initialHistory.labels.push(label);
+
+                if (i < LIVE_START_INDEX) {
+                    const fluctuation = (Math.random() - 0.5) * 0.25; 
+                    simulatedPower = simulatedPower + fluctuation;
+                    simulatedPower = Math.max(powerBaseline - 1.5, Math.min(powerBaseline + 1.5, simulatedPower)); 
+                    
+                    initialHistory.powerData.push(simulatedPower); 
+                } else {
+                    initialHistory.powerData.push(null); 
+                }
+            }
+            
+            selectedData.liveHistory = initialHistory;
+            live5MinCounter = LIVE_START_INDEX; 
+        }
+
+        // --- 8 小時歷史數據初始化 (提前在載入時運行以優化切換速度) ---
+        function init8HourHistory(selectedData) {
+            const basePower = selectedData.latest.realTimePower; 
+            const basePF = selectedData.latest.powerFactor;
+            const initialData = { labels: [], powerData: [], pfData: [], cumulativeEnergyData: [] }; 
+            const now = new Date();
+            const dataIntervalMs = 5 * 60 * 1000; // 5 分鐘間隔
+            const intervalHours = dataIntervalMs / (1000 * 60 * 60);
+
+            let currentCumulativeEnergy = selectedData.latest.dailyEnergy - (basePower * 8 * 1.1);
+            
+            for(let i = 0; i < CHART_8H_POINTS; i++) {
+                 const time = new Date(now.getTime() - (CHART_8H_POINTS - 1 - i) * dataIntervalMs);
+                 initialData.labels.push(time.toLocaleTimeString('zh-Hant', { hour: '2-digit', minute: '2-digit', hour12: false }));
+                 
+                 const hour = time.getHours();
+                 const dailyCycleFactor = 1 + Math.sin((hour / 24) * 2 * Math.PI) * 0.4;
+                 const power = basePower * dailyCycleFactor + (Math.random() - 0.5) * 1.5;
+
+                 initialData.powerData.push(power); 
+                 initialData.pfData.push(basePF + (Math.random() - 0.5) * 0.05);
+                 
+                 const incrementalEnergy = power * intervalHours;
+                 currentCumulativeEnergy += incrementalEnergy;
+                 initialData.cumulativeEnergyData.push(currentCumulativeEnergy);
+            }
+            selectedData.eightHourHistory = initialData;
+        }
+
+        // 5分鐘即時滾動 (高頻率kW)
+        function startLive5MinUpdates(selectedData) {
+            stopAllChartIntervals();
+            
+            if (!selectedData.liveHistory) {
+                init5MinHistory(selectedData);
+            }
+            
+            if (selectedData.liveHistory.powerData.every(p => p !== null)) {
+                live5MinCounter = CHART_5MIN_POINTS;
+            }
+
+            live5MinInterval = setInterval(() => {
+                const newPower = selectedData.latest.realTimePower;
+                const newLabel = getCurrentTimeLabel(); 
+
+                if (live5MinCounter < CHART_5MIN_POINTS) {
+                    selectedData.liveHistory.powerData[live5MinCounter] = newPower;
+                    selectedData.liveHistory.labels[live5MinCounter] = newLabel;
+                    live5MinCounter++;
+
+                } else {
+                    selectedData.liveHistory.labels.shift();
+                    selectedData.liveHistory.powerData.shift();
+                    
+                    selectedData.liveHistory.labels.push(newLabel);
+                    selectedData.liveHistory.powerData.push(newPower);
+                }
+                
+                if (currentChart && currentInterval === '5min_live') {
+                    currentChart.data.labels = selectedData.liveHistory.labels;
+                    currentChart.data.datasets[0].data = selectedData.liveHistory.powerData;
+                    
+                    const basePower = selectedData.latest.realTimePower;
+                    currentChart.options.scales.y1.suggestedMin = basePower - 1.5;
+                    currentChart.options.scales.y1.suggestedMax = basePower + 1.5;
+                    
+                    currentChart.update('none'); 
+                }
+            }, 5000); 
+        }
+
+        // 8小時即時滾動 (中頻率kW/PF/kWh)
+        function startLive8HourUpdates(selectedData) {
+            stopAllChartIntervals();
+            
+            // 由於已在 initApp 中預先初始化，這裡只需檢查數據是否存在
+            if (!selectedData.eightHourHistory) {
+                // 如果預加載失敗或未發生，則重新執行初始化
+                init8HourHistory(selectedData);
+            }
+
+            live8HourInterval = setInterval(() => {
+                const updateSeconds = 10;
+                const updateHours = updateSeconds / 3600;
+
+                const newPower = selectedData.latest.realTimePower; 
+                const newPF = selectedData.latest.powerFactor;
+                const newLabel = getCurrentTimeLabel(false); 
+
+                selectedData.eightHourHistory.labels.shift();
+                selectedData.eightHourHistory.powerData.shift();
+                selectedData.eightHourHistory.pfData.shift();
+                selectedData.eightHourHistory.cumulativeEnergyData.shift(); 
+
+                const latestCumulativeEnergy = selectedData.eightHourHistory.cumulativeEnergyData[selectedData.eightHourHistory.cumulativeEnergyData.length - 1];
+                const newCumulativeEnergy = latestCumulativeEnergy + newPower * updateHours;
+                
+                selectedData.eightHourHistory.labels.push(newLabel);
+                selectedData.eightHourHistory.powerData.push(newPower); 
+                selectedData.eightHourHistory.pfData.push(newPF);
+                selectedData.eightHourHistory.cumulativeEnergyData.push(newCumulativeEnergy);
+
+                if (currentChart && currentInterval === '8h_live') {
+                    currentChart.data.labels = selectedData.eightHourHistory.labels;
+                    currentChart.data.datasets[0].data = selectedData.eightHourHistory.powerData;
+                    currentChart.data.datasets[1].data = selectedData.eightHourHistory.pfData;
+                    currentChart.data.datasets[2].data = selectedData.eightHourHistory.cumulativeEnergyData;
+
+                    // 更新 Y3 軸範圍
+                    const minE = Math.min(...selectedData.eightHourHistory.cumulativeEnergyData);
+                    const maxE = Math.max(...selectedData.eightHourHistory.cumulativeEnergyData);
+                    currentChart.options.scales.y3.suggestedMin = minE * 0.995;
+                    currentChart.options.scales.y3.suggestedMax = maxE * 1.005;
+
+                    currentChart.update('none'); 
+                }
+            }, 10000); // 10 秒更新一次 
+        }
+
+        // 函數：更新圖表視覺設定 (用於深色模式)
+        function updateChartAppearance(isDark) {
+            const fontColor = isDark ? '#f3f4f6' : '#1f2937';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
+            if (currentChart) {
+                currentChart.options.color = fontColor;
+                currentChart.options.plugins.title.color = fontColor;
+                currentChart.options.plugins.legend.labels.color = fontColor;
+                
+                const scales = currentChart.options.scales;
+                
+                for (const scaleId in scales) {
+                    if (scales[scaleId].display !== false) {
+                        scales[scaleId].ticks.color = fontColor;
+                        scales[scaleId].grid.color = gridColor;
+                        scales[scaleId].title.color = fontColor; // 確保軸標題顏色也更新
+                    }
+                }
+                
+                // 軸線顏色使用變數，但特定軸的標題顏色保持不變
+                scales.y1.title.color = 'rgb(59, 130, 246)'; // 藍色
+                scales.y2.title.color = 'rgb(107, 114, 128)'; // 灰色
+                scales.y3.title.color = 'rgb(239, 68, 68)'; // 紅色
+
+                currentChart.update();
+            }
+        }
+
+
+        // 函數：繪製或重新繪製 Chart.js 圖表
+        function renderChart(data, interval, isCustom = false) {
+            const ctx = document.getElementById('historyChart').getContext('2d');
+            const isDark = document.body.classList.contains('dark-mode');
+            
+            if (currentChart) currentChart.destroy();
+            
+            let datasets = [];
+            let chartLabels = [];
+            let chartTitle = '';
+            let chartData = null;
+
+            chartData = isCustom ? data.history : 
+                        interval === '5min_live' ? data.liveHistory : 
+                        data.eightHourHistory;
+
+            if (!chartData || chartData.labels.length === 0) {
+                if(interval === '5min_live') { init5MinHistory(data); chartData = data.liveHistory; }
+                else if (interval === '8h_live') { init8HourHistory(data); chartData = data.eightHourHistory; }
+                else { chartData = { labels: [], powerData: [], pfData: [], cumulativeEnergyData: [] }; }
+            }
+            
+            chartLabels = chartData.labels;
+
+            if (interval === '5min_live') {
+                datasets.push({
+                    label: '即時用電 (kW)',
+                    data: chartData.powerData,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'y1',
+                    pointRadius: 3, 
+                    pointHoverRadius: 5,
+                    tension: 0.1,
+                    spanGaps: true, 
+                });
+                chartTitle = `${data.name} - 即時用電趨勢 (5分鐘)`;
+
+            } else { 
+                
+                datasets.push({ 
+                    label: '即時用電 (kW)', 
+                    data: chartData.powerData, 
+                    borderColor: 'rgb(59, 130, 246)', 
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)', 
+                    yAxisID: 'y1', 
+                    tension: 0.4,
+                    pointRadius: 2, 
+                });
+                
+                datasets.push({ 
+                    label: '功率因素 (PF)', 
+                    data: chartData.pfData, 
+                    borderColor: 'rgb(107, 114, 128)', 
+                    backgroundColor: 'rgba(107, 114, 128, 0.1)', 
+                    yAxisID: 'y2', 
+                    tension: 0.4,
+                    pointRadius: 2,
+                });
+
+                datasets.push({ 
+                    label: '累積電量 (kWh)', 
+                    data: chartData.cumulativeEnergyData, 
+                    borderColor: 'rgb(239, 68, 68)', 
+                    backgroundColor: 'rgba(239, 68, 68, 0.05)', 
+                    yAxisID: 'y3', 
+                    tension: 0.4,
+                    pointRadius: 0, 
+                    borderWidth: 2,
+                    fill: false,
+                });
+                
+                chartTitle = isCustom ? `${data.name} - 自訂區間電力趨勢` : `${data.name} - 8 小時即時電力滾動`;
+            }
+
+            // --- 確定 Y1 軸 (kW) 的建議範圍 (已修復 TypeError) ---
+            let y1SuggestedMin = undefined;
+            let y1SuggestedMax = undefined;
+
+            if (interval === '5min_live' && data.latest) {
+                const basePower = data.latest.realTimePower;
+                y1SuggestedMin = basePower - 2;
+                y1SuggestedMax = basePower + 2;
+            } else if (chartData && chartData.powerData.length > 0) {
+                const validPowerData = chartData.powerData.filter(v => v !== null);
+                if (validPowerData.length > 0) {
+                    const minP = Math.min(...validPowerData);
+                    const maxP = Math.max(...validPowerData);
+                    y1SuggestedMin = minP * 0.95;
+                    y1SuggestedMax = maxP * 1.05;
+                }
+            }
+
+
+            // 確定 Y3 軸的建議範圍
+            const isEnergyChart = interval !== '5min_live' && chartData.cumulativeEnergyData && chartData.cumulativeEnergyData.length > 0;
+            const minEnergy = isEnergyChart ? Math.min(...chartData.cumulativeEnergyData) : 0;
+            const maxEnergy = isEnergyChart ? Math.max(...chartData.cumulativeEnergyData) : 500;
+            
+            const fontColor = isDark ? '#f3f4f6' : '#1f2937';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: chartLabels, datasets: datasets },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false, },
+                    plugins: { 
+                        title: { display: true, text: chartTitle, font: { size: 16 }, color: fontColor },
+                        legend: { labels: { color: fontColor } }
+                    },
+                    scales: { 
+                        x: {
+                            ticks: { maxTicksLimit: interval === '5min_live' ? 10 : 15, autoSkipPadding: 20, color: fontColor },
+                            grid: { color: gridColor },
+                        },
+                        y1: { 
+                            type: 'linear', display: true, position: 'left', 
+                            title: { display: true, text: '電力 (kW)', color: 'rgb(59, 130, 246)' }, 
+                            suggestedMin: y1SuggestedMin,
+                            suggestedMax: y1SuggestedMax,
+                            ticks: { color: fontColor },
+                            grid: { color: gridColor },
+                        },
+                        y2: { 
+                            type: 'linear', 
+                            display: interval !== '5min_live', 
+                            position: 'right', 
+                            grid: { drawOnChartArea: false, color: gridColor }, 
+                            min: 0.7, max: 1.0, 
+                            title: { display: interval !== '5min_live', text: '功率因素 (PF)', color: 'rgb(107, 114, 128)' }, 
+                            ticks: { color: fontColor },
+                        },
+                        y3: { 
+                            type: 'linear', 
+                            display: isEnergyChart, 
+                            position: 'right', 
+                            grid: { drawOnChartArea: false, color: gridColor }, 
+                            title: { display: isEnergyChart, text: '累積電量 (kWh)', color: 'rgb(239, 68, 68)' }, 
+                            suggestedMin: minEnergy * 0.995,
+                            suggestedMax: maxEnergy * 1.005,
+                            ticks: { color: fontColor },
+                        },
+                    },
+                },
+            });
+            document.getElementById('chart-section').style.display = 'block';
+        }
+
+        // --- 深色模式邏輯 ---
+
+        window.toggleDarkMode = function() {
+            const body = document.body;
+            body.classList.toggle('dark-mode');
+            const isDarkMode = body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDarkMode);
+            
+            // 更新按鈕圖標
+            document.getElementById('dark-mode-icon').textContent = isDarkMode ? '☀️' : '🌙';
+
+            // 更新圖表外觀
+            if (currentChart) {
+                updateChartAppearance(isDarkMode);
+            }
+        }
+
+        function loadDarkModePreference() {
+            const isDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (isDarkMode) {
+                document.body.classList.add('dark-mode');
+                document.getElementById('dark-mode-icon').textContent = '☀️';
+            } else {
+                 document.getElementById('dark-mode-icon').textContent = '🌙';
+            }
+        }
+
+        // --- 事件處理函數 ---
+
+        window.switchArea = function(id) {
+            selectedAreaId = id;
+            const selectedData = areaData.find(d => d.id === id);
+
+            if (selectedData) {
+                document.getElementById('dashboard-title').textContent = `${selectedData.name} - 監控儀表板`;
+                
+                renderMetrics(selectedData);
+                startRealTimeUpdates();
+                
+                switchInterval('5min_live'); 
+                
+                document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`btn-${id}`).classList.add('active');
+            }
+        };
+
+        window.switchInterval = function(interval) {
+            currentInterval = interval;
+            const selectedData = areaData.find(d => d.id === selectedAreaId);
+
+            document.querySelectorAll('.interval-button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${interval}`).classList.add('active');
+
+            const customSelector = document.getElementById('custom-range-selector');
+            customSelector.style.display = interval === 'custom' ? 'flex' : 'none';
+
+            stopAllChartIntervals();
+
+            if (interval === '5min_live') {
+                selectedData.liveHistory = null; // 每次切換都重新初始化 5 分鐘數據以確保從中間開始填充
+                renderChart(selectedData, '5min_live');
+                startLive5MinUpdates(selectedData);
+            } else if (interval === '8h_live') {
+                // 直接使用預先初始化的數據，不會有明顯延遲
+                renderChart(selectedData, '8h_live');
+                startLive8HourUpdates(selectedData);
+            } else {
+                if (currentChart) currentChart.destroy();
+            }
+        }
+
+        window.generateCustomChart = function() {
+            const startDateInput = document.getElementById('startDate').value;
+            const endDateInput = document.getElementById('endDate').value;
+            
+            if (!startDateInput || !endDateInput) {
+                showCustomMessage("請選擇有效的開始和結束日期時間！", "error");
+                return;
+            }
+
+            const startDate = new Date(startDateInput);
+            const endDate = new Date(endDateInput);
+            
+            if (startDate >= endDate) {
+                showCustomMessage("開始時間必須早於結束時間！", "error");
+                return;
+            }
+
+            stopAllChartIntervals();
+
+            // --- 模擬自訂區間數據 ---
+            const selectedData = areaData.find(d => d.id === selectedAreaId);
+            const diffMs = endDate.getTime() - startDate.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+            const dataPoints = Math.min(100, Math.ceil(diffHours * 10)); 
+
+            const customLabels = [];
+            const customPowerData = []; 
+            const customPfData = [];
+            const customEnergyData = []; 
+            const stepMs = diffMs / dataPoints;
+            const stepHours = stepMs / (1000 * 60 * 60);
+            
+            let currentMs = startDate.getTime();
+            const basePower = selectedData.latest.realTimePower; 
+
+            let cumulativeEnergy = selectedData.latest.dailyEnergy - (basePower * diffHours * 0.9);
+            
+            for (let i = 0; i < dataPoints; i++) {
+                const time = new Date(currentMs);
+                
+                customLabels.push(time.toLocaleTimeString('zh-Hant', { hour: '2-digit', minute: '2-digit', hour12: false }));
+                
+                const activityFactor = 1 + Math.sin(time.getHours() / 12 * Math.PI) * 0.5; 
+                const power = (basePower * activityFactor) + (Math.random() * 2);
+                customPowerData.push(power); 
+                
+                customPfData.push(selectedData.latest.powerFactor + (Math.random() - 0.5) * 0.03);
+
+                const incrementalEnergy = power * stepHours;
+                cumulativeEnergy += incrementalEnergy;
+                customEnergyData.push(cumulativeEnergy);
+
+                currentMs += stepMs;
+            }
+
+            const customData = {
+                name: selectedData.name,
+                history: { 
+                    labels: customLabels, 
+                    powerData: customPowerData, 
+                    pfData: customPfData, 
+                    cumulativeEnergyData: customEnergyData 
+                } 
+            };
+            
+            renderChart(customData, 'custom', true);
+            showCustomMessage("自訂區間圖表已生成！", "success");
+        }
+        
+        // 自訂訊息框 
+        function showCustomMessage(message, type) {
+            const container = document.querySelector('.main-content');
+            let msgBox = document.getElementById('custom-message-box');
+            
+            if (!msgBox) {
+                msgBox = document.createElement('div');
+                msgBox.id = 'custom-message-box';
+                msgBox.style.cssText = `
+                    position: fixed; top: 20px; right: 20px; padding: 15px 30px; 
+                    border-radius: 8px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); 
+                    z-index: 1000; transition: opacity 0.3s, transform 0.3s; opacity: 0;
+                    transform: translateX(100%);
+                `;
+                container.appendChild(msgBox);
+            }
+
+            if (type === 'error') {
+                msgBox.style.backgroundColor = '#fca5a5';
+                msgBox.style.color = '#7f1d1d';
+            } else if (type === 'success') {
+                msgBox.style.backgroundColor = '#a7f3d0';
+                msgBox.style.color = '#065f46';
+            } else {
+                msgBox.style.backgroundColor = '#bfdbfe';
+                msgBox.style.color = '#1e40af';
+            }
+            
+            msgBox.textContent = message;
+            
+            setTimeout(() => {
+                msgBox.style.opacity = '1';
+                msgBox.style.transform = 'translateX(0)';
+            }, 50);
+
+            setTimeout(() => {
+                msgBox.style.opacity = '0';
+                msgBox.style.transform = 'translateX(100%)';
+            }, 3000);
+        }
+
+        // 函數：初始化導航欄
+        function initNavigation() {
+            const navContainer = document.getElementById('area-navigation');
+            navContainer.innerHTML = areaData.map(area => `
+                <button 
+                    id="btn-${area.id}"
+                    class="nav-button" 
+                    onclick="switchArea('${area.id}')">
+                    ${area.name}
+                </button>
+            `).join('');
+        }
+
+        // 應用程式主初始化函數
+        function initApp() {
+            // 1. 載入深色模式偏好
+            loadDarkModePreference();
+            
+            // 2. 初始化導航
+            initNavigation();
+
+            // 3. 預先初始化所有區域的 8 小時數據 (優化載入速度)
+            areaData.forEach(init8HourHistory);
+            
+            // 4. 預設切換到第一個區域
+            switchArea(areaData[0].id);
+        }
+
+        // 啟動應用程式
+        window.onload = initApp;
+    </script>
+</body>
+</html>
